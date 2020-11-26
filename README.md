@@ -8,3 +8,10 @@
 
 ### 软件正在开发中，尽请期待~
 
+
+
+### Edge驱动下载地址
+https://developer.microsoft.com/en-us/microsoft-edge/tools/webdriver/
+
+### 谷歌驱动下载地址
+
