@@ -25,9 +25,6 @@ def get_result(d_type=9004, img_dir='yzm.png'):
     }
     params.update(base_params)
     files = {'userfile': ('ccc.jpg', img_info)}
-    # try:
     r = requests.post('http://upload.chaojiying.net/Upload/Processing.php', data=params, files=files, headers=HEADERS)
     rest = r.json()
     return rest['pic_str']
-    # except Exception:
-    #     return '自动处理验证码错误，请下载最新版本后或切换网络环境重试'

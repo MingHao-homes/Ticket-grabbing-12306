@@ -1,6 +1,7 @@
 import sys
 import random
 import time
+import json
 from settings import username, password, WebServer
 from pools.YZMData import get_result
 from PIL import Image
@@ -9,6 +10,7 @@ from selenium.webdriver import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.chrome.options import Options
 
 
 # 登录接口  login-api
@@ -18,7 +20,6 @@ class Login(object):
         实例化登录对象
         """
         self.webdriver = self.init_webdriver()
-        # self.webdriver.maximize_window()
         if self.webdriver is None:
             sys.exit()
 
@@ -30,16 +31,20 @@ class Login(object):
         webdriver_obj = None
         try:
             if WebServer == 1:
-                webdriver_obj = webdriver.Chrome('../pools/chromedriver.exe',)
+                # chrome_options = Options()
+                # chrome_options.add_argument('--headless')
+                # chrome_options.add_argument('--disable-gpu')
+                # webdriver_obj = webdriver.Chrome('pools/chromedriver.exe', chrome_options=chrome_options)
+                webdriver_obj = webdriver.Chrome('pools/chromedriver.exe')
                 webdriver_obj.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
-                    "source": """
+                    "source": '''
                     Object.defineProperty(navigator, 'webdriver', {
                       get: () => undefined
                     })
-                  """
+                  '''
                 })
             elif WebServer == 2:
-                webdriver_obj = webdriver.Edge('msedgedriver.exe')
+                webdriver_obj = webdriver.Edge('pools/msedgedriver.exe')
             print('驱动加载成功!')
         except:
             print('启动加载失败，请检查配置游览器驱动')
@@ -57,17 +62,18 @@ class Login(object):
         # 点击账号登录标签
         time.sleep(1)
         self.xpath('/html/body/div[2]/div[2]/ul/li[2]/a').click()
-        # 处理验证码
-        self.check_yzm()
         # 输入账号密码
         self.xpath('//*[@id="J-userName"]').send_keys(username)
         self.xpath('//*[@id="J-password"]').send_keys(password)
+        # 处理验证码
+        self.check_yzm()
         # 点击登录
         self.xpath('//*[@id="J-login"]').click()
         # 处理滑动验证码
         self.hd_yzm()
         # 获取登录之后的cookie
-        self.get_cookies()
+        cookie = self.get_cookies()
+        return cookie
 
     def check_yzm(self):
         """
@@ -92,7 +98,6 @@ class Login(object):
             frame.save('code.png')
             # 验证码识别，返回点击坐标
             result = get_result(img_dir='code.png')
-            print(result)  #:x1,y1|x2,y2|x3,y3
             # 将result转换成[[x1,y1],[x2,y2]]
             all_list = []
             if '|' in result:
@@ -142,45 +147,29 @@ class Login(object):
         """
         try:
             # 定位滑动验证位置
-            res = self.xpath('//*[@id="nc_1_n1z"]')
-            # 使用鼠标动作链进行点击并悬浮
-            ActionChains(self.webdriver).click_and_hold(on_element=res).perform()
-
-            distance = 500
-            x = 500
-            # 拖动超过拼接位置8个距离
-            distance += 8
-            v = 0
-            t = 0.2
-            tracks = []
-            current = 0
-            mid = distance * 7 / 8
-            while current < distance:
-                if current < mid:
-                    a = random.randint(2, 4)
-                else:
-                    a = -random.randint(3, 5)
-                v0 = v
-                s = v0 * t + 0.5 * a * (t ** 2)
-                current += s
-                tracks.append(round(s))
-                v = v0 + a * t
-            # 补回超过距离为10，可多次测试，自测误差，进行多补或少补
-            x = [-2, -3, -3, -2]
-            tracks += x
-            # 开始移动，加速，减速，超过，拖回
-            for x in tracks:
-                ActionChains(self.webdriver).move_by_offset(xoffset=x, yoffset=random.randint(100, 200)).perform()
-            time.sleep(1)
-            ActionChains(self.webdriver).release(res).perform()
+            try:
+                res = self.xpath('//*[@id="nc_1_n1z"]')
+            except:
+                print('滑动验证码未发现')
+            else:
+                # 实例化一个动作链关联游览器
+                action = ActionChains(self.webdriver)
+                # 使用鼠标动作链进行点击并悬浮
+                action.click_and_hold(res)
+                # 滑动验证码
+                action.move_by_offset(500, 0).perform()
+            finally:
+                print('登陆成功')
         except:
             print('处理滑动验证码失败')
             sys.exit()
 
     def get_cookies(self):
-        print(self.webdriver.get_cookies())
+        time.sleep(1)
+        dict_cookies = self.webdriver.get_cookies()
+        json_cookies = json.dumps(dict_cookies)
+        print('获取验证码成功!')
+        return json_cookies
 
-
-if __name__ == '__main__':
-    a = Login()
-    a.login()
+    def get_webserver(self):
+        return
